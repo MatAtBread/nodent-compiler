@@ -3,7 +3,7 @@
 nodent-compiler
 ======
 
-NoDent is a small module for Nodejs that implements the JavaScript ES7 keywords `async` and `await`. These make writing, reading and understanding asynchronous and callback methods more implicit and embedded in the language. It works by (optionally) transforming JavaScript when it is loaded into Node.
+NoDent is a small module for Nodejs that implements the JavaScript ES7 keywords `async` and `await`. These make writing, reading and understanding asynchronous and callback methods more implicit and embedded in the language. It works by transforming the ES7 JavaScript keywords `await` and `async` to fully-ES5 compatible code.
 
 This is the core compiler implementation. The main documentation and details for the CLI, require hook and package options, performance and testing can be found [here](https://github.com/MatAtBread/nodent/blob/master/README.md).
 
