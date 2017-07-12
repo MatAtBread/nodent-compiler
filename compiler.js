@@ -132,9 +132,9 @@ function parseCode(code,origFilename,__sourceMapping,opts) {
 
 NodentCompiler.prototype.version =  require("./package.json").version ;
 NodentCompiler.prototype.isThenable = function(x) { return x && x instanceof Object && typeof x.then==="function"} ;
+NodentCompiler.prototype.compile =  compile ;
 // Exported ; but not to be used lightly!
 NodentCompiler.prototype.parse = parseCode ;
-NodentCompiler.prototype.compile =  compile ;
 NodentCompiler.prototype.asynchronize =  treeSurgeon.asynchronize ;
 NodentCompiler.prototype.prettyPrint =  prettyPrint ;
 NodentCompiler.prototype.getDefaultCompileOptions = undefined ;
