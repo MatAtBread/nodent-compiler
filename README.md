@@ -13,7 +13,11 @@ Usage
 ```javascript
 var NodentCompiler = require('nodent-compiler');
 var compiler = new NodentCompiler() ;
-var es5ReadySourceCode = compiler.compile(sourceCode, filename, { sourcemap:false, promises: true, noRuntime: true, es6target: true });
+var es5ReadySourceCode = compiler.compile(
+  sourceCode,
+  filename,
+  { sourcemap:false, promises: true, noRuntime: true, es6target: true }
+).code;
 ```
 
 `new NodentCompiler(opts)` creates a new NodentCompiler. Note that instances of a NodentCompiler can (and should) be reused to improve compilation performance since internal structures are cached. `opts` is an optional set of options containing:
