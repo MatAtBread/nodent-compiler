@@ -136,6 +136,7 @@ NodentCompiler.prototype.compile =  compile ;
 // Exported ; but not to be used lightly!
 NodentCompiler.prototype.parse = parseCode ;
 NodentCompiler.prototype.asynchronize =  treeSurgeon.asynchronize ;
+NodentCompiler.prototype.printNode =  treeSurgeon.printNode ;
 NodentCompiler.prototype.prettyPrint =  prettyPrint ;
 NodentCompiler.prototype.getDefaultCompileOptions = undefined ;
 
