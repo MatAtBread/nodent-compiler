@@ -9,6 +9,59 @@ function printNode(ast) {
     return generate(ast,{}).code ;
 }
 
+function loc(old,repl){
+    ['start','end','loc','range'].forEach(function(k){
+        if (k in old && !(k in repl))
+            repl[k] = old[k] ;
+    }) ;
+}
+
+var referencePrototypes = {
+    replace: function(newNode) {
+        if (Array.isArray(newNode) && newNode.length===1) newNode = newNode[0] ;
+        if ('index' in this) {
+            loc(this.parent[this.field][this.index], newNode);
+            if (Array.isArray(newNode)) {
+                [].splice.apply(this.parent[this.field],[this.index,1].concat(newNode)) ;
+            } else {
+                this.parent[this.field][this.index] = newNode ;
+            }
+        } else {
+            loc(this.parent[this.field], newNode);
+            if (Array.isArray(newNode)) {
+                this.parent[this.field] = {type:'BlockStatement',body:newNode} ;
+            } else {
+                this.parent[this.field] = newNode ;
+            }
+        }
+        return this.self ;
+    },
+    append: function(newNode) {
+        if (Array.isArray(newNode) && newNode.length===1) newNode = newNode[0] ;
+        if ('index' in this) {
+            if (Array.isArray(newNode)) {
+                [].splice.apply(this.parent[this.field],[this.index+1,0].concat(newNode)) ;
+            } else {
+                this.parent[this.field].splice(this.index+1,0,newNode) ;
+            }
+        } else {
+            throw new Error("Cannot append Element node to non-array") ;
+        }
+        return this.self ;
+    },
+    index: function(){
+        return this.parent[this.field].indexOf(this.self) ;
+    },
+    removeElement: function() {
+        return this.parent[this.field].splice(this.index,1)[0] ;
+    },
+    removeNode: function() {
+        var r = this.parent[this.field] ;
+        delete this.parent[this.field] ;
+        return r ;
+    }
+};
+
 function treeWalk(n,walker,state){
     if (!state) {
         state = [{self:n}] ;
@@ -27,20 +80,31 @@ function treeWalk(n,walker,state){
             ref.remove = referencePrototypes.removeNode ;
         }
         state.unshift(ref) ;
-        treeWalker(ref.self,walker,state) ;
+        treeWalk(ref.self,walker,state) ;
         state.shift() ;
     }
 
+    function nodeKeys(n,state,down){
+	visitKeys[n.type].forEach(function(member){
+	    var examine = n[member] ;
+	    if (Array.isArray(examine)) {
+		examine.forEach(function(x){ if (x) down(x,state) }) ;
+	    } else {
+		if (examine) down(examine,state);
+	    }
+	}) ;
+    }
+    
     function descend() {
         if (!(n.type in visitKeys)) {
             // We don't know what type of node this is - it's not in the ESTree spec,
             // (maybe a 'react' extension?), so just ignore it
         } else {
-            acornBase[n.type](n,state,function down(sub,_,derivedFrom){
+            nodeKeys(n,state,function down(sub,_,derivedFrom){
                 if (sub===n)
                     return acornBase[derivedFrom || n.type](n,state,down) ;
 
-                var keys = Object.keys(n) ;
+                var keys = visitKeys[n.type] ;
                 for (var i=0; i<keys.length; i++){
                     var v = n[keys[i]] ;
                     if (Array.isArray(v)) {
@@ -70,7 +134,7 @@ function treeWalk(n,walker,state){
 var parseCache = {} ;
 function partialParse(code,args) {
   if (!parseCache[code]) {
-    parseCache[code] = babylon.parse(code) ;
+    parseCache[code] = babylon.parse(code).program ;
   }
 
   var result = substitute(parseCache[code]) ;
@@ -131,7 +195,7 @@ function partialParse(code,args) {
 var transform = require('../lib/arboriculture').transform ;
 
 var sample = "async function mat(a) { return a+1 }" ;
-var ast = babylon.parse(sample) ;
+var ast = babylon.parse(sample) .program;
 console.log(printNode(ast)) ;
 
 var newAst = transform({
