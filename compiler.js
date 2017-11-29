@@ -40,7 +40,7 @@ function compile(code,origFilename,__sourceMapping,opts) {
     }
 
     var pr = this.parse(code,origFilename,null,opts);
-    this.asynchronize(pr,null,opts,this.log || noLogger) ;
+    this.transform(pr,opts,this.log || noLogger, parser, NodentCompiler.prototype.printNode) ;
     this.prettyPrint(pr,opts) ;
     return pr ;
 }
@@ -135,10 +135,35 @@ NodentCompiler.prototype.isThenable = function(x) { return x && x instanceof Obj
 NodentCompiler.prototype.compile =  compile ;
 // Exported ; but not to be used lightly!
 NodentCompiler.prototype.parse = parseCode ;
-NodentCompiler.prototype.asynchronize =  treeSurgeon.asynchronize ;
-NodentCompiler.prototype.printNode =  treeSurgeon.printNode ;
 NodentCompiler.prototype.prettyPrint =  prettyPrint ;
 NodentCompiler.prototype.getDefaultCompileOptions = undefined ;
+NodentCompiler.prototype.transform =  treeSurgeon.transform ;
+// asynchronize and printNode were previuosly defined in arboriculture, but they are
+// are now (>3.2.0) pulled up into compiler so arboriculture.trabsform can be called from other 
+// hosts such as babel 7
+NodentCompiler.prototype.asynchronize = function asynchronize(pr, __sourceMapping, opts, logger) {
+    try {
+        return treeSurgeon.transform(pr, opts, logger, parser, NodentCompiler.prototype.printNode);
+    } catch (ex) {
+        if (ex instanceof SyntaxError) {
+            var l = pr.origCode.substr(ex.pos - ex.loc.column);
+            l = l.split("\n")[0];
+            ex.message += " (nodent)\n" + l + "\n" + l.replace(/[\S ]/g, "-").substring(0, ex.loc.column) + "^";
+            ex.stack = "";
+        }
+        throw ex;
+    }
+} ;
+NodentCompiler.prototype.printNode =  function printNode(n) {
+    if (!n) return '' ;
+    if (Array.isArray(n))
+        return n.map(printNode).join("|\n");
+    try {
+        return outputCode(n) ; //+"\t//@"+Object.keys(n).filter(function(k){ return k[0]==='$'}).map(function(k){ return k+":"+n[k] });
+    } catch (ex) {
+        return ex.message + ": " + (n && n.type);
+    }
+} ;
 
 Object.defineProperty(NodentCompiler.prototype,"Promise",{
     get:function (){
