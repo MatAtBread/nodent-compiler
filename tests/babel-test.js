@@ -1,12 +1,35 @@
 /* Test transformation by Babel;*/
 
-//var core = require('@babel/babel-core') ;
+var fs = require('fs') ;
 var babylon = require('@babel/babylon');
 var generate = require('@babel/babel-generator').default;
 var visitKeys = require('@babel/babel-types').VISITOR_KEYS;
 
 function printNode(ast) {
     return generate(ast,{}).code ;
+}
+
+function forEachNodeKey(n,down){
+	visitKeys[n.type].forEach(function(member){
+	    var examine = n[member] ;
+	    if (Array.isArray(examine)) {
+			examine.forEach(function(x){ if (x) down(x) }) ;
+	    } else {
+			if (examine) down(examine);
+	    }
+	}) ;
+}
+
+function nodeKeys(n) {
+    return n ? visitKeys[n.type]:null ;
+}
+
+function parse(code) {
+	return babylon.parse(code,{
+		allowImportExportEverywhere:true,
+		allowReturnOutsideFunction:true,
+		allowSuperOutsideMethod:true
+	}).program ;
 }
 
 function loc(old,repl){
@@ -62,7 +85,7 @@ var referencePrototypes = {
     }
 };
 
-function treeWalk(n,walker,state){
+function treeWalker(n,walker,state){
     if (!state) {
         state = [{self:n}] ;
         state.replace = function(pos,newNode) {
@@ -80,31 +103,17 @@ function treeWalk(n,walker,state){
             ref.remove = referencePrototypes.removeNode ;
         }
         state.unshift(ref) ;
-        treeWalk(ref.self,walker,state) ;
+        treeWalker(ref.self,walker,state) ;
         state.shift() ;
-    }
-
-    function nodeKeys(n,state,down){
-	visitKeys[n.type].forEach(function(member){
-	    var examine = n[member] ;
-	    if (Array.isArray(examine)) {
-		examine.forEach(function(x){ if (x) down(x,state) }) ;
-	    } else {
-		if (examine) down(examine,state);
-	    }
-	}) ;
     }
     
     function descend() {
-        if (!(n.type in visitKeys)) {
+        var keys = nodeKeys(n) ;
+        if (!keys) {
             // We don't know what type of node this is - it's not in the ESTree spec,
             // (maybe a 'react' extension?), so just ignore it
         } else {
-            nodeKeys(n,state,function down(sub,_,derivedFrom){
-                if (sub===n)
-                    return acornBase[derivedFrom || n.type](n,state,down) ;
-
-                var keys = visitKeys[n.type] ;
+            forEachNodeKey(n,function down(sub){
                 for (var i=0; i<keys.length; i++){
                     var v = n[keys[i]] ;
                     if (Array.isArray(v)) {
@@ -134,7 +143,7 @@ function treeWalk(n,walker,state){
 var parseCache = {} ;
 function partialParse(code,args) {
   if (!parseCache[code]) {
-    parseCache[code] = babylon.parse(code).program ;
+    parseCache[code] = parse(code) ;
   }
 
   var result = substitute(parseCache[code]) ;
@@ -194,33 +203,45 @@ function partialParse(code,args) {
 
 var transform = require('../lib/arboriculture').transform ;
 
-var sample = "async function mat(a) { return a+1 }" ;
-var ast = babylon.parse(sample) .program;
-console.log(printNode(ast)) ;
+for (let fileName of process.argv.slice(2)) {
+	var sample = '(async function _(){ '+fs.readFileSync(fileName).toString()+'})';
 
-var newAst = transform({
-    filename:'SAMPLE',
-    ast:ast
-},{
-    es6target:false,
-    noRuntime:true,
-    babelTree:true,
-    $arguments:'$args',
-    generatedSymbolPrefix:'$',
-    engine:false,
-    generators:false,
-    promises:true,
-    lazyThenables:false,
-    wrapAwait:true,
-    $return:'$return',
-    $error:'$error'
-},
-console.log.bind(console),
-{
-    part:partialParse,
-    treeWalker:treeWalk
-},
-printNode
-).ast ;
+	try {
+		var ast = parse(sample);
+//		console.log(printNode(ast)) ;
 
-console.log(printNode(newAst)) ;
+		var newAst = transform({
+			filename:fileName,
+			ast:ast
+		},{
+			es6target:false,
+			noRuntime:true,
+			babelTree:true,
+			$arguments:'$args',
+			generatedSymbolPrefix:'$',
+			engine:false,
+			generators:false,
+			promises:true,
+			lazyThenables:false,
+			wrapAwait:true,
+			$return:'$return',
+			$error:'$error'
+		},
+		console.log.bind(console),
+		{
+			part:partialParse,
+			treeWalker:treeWalker
+		},
+		printNode
+		).ast ;
+
+		Promise.all([sample,printNode(ast),printNode(newAst)].map(code => eval(code)())).then(
+				r => console.log(fileName,r && r[0]==r[1] && r[1]==r[2]),
+				ex => console.log(fileName,ex)
+		) ;
+
+		//console.log(printNode(newAst)) ;
+	} catch (ex) {
+		console.log(fileName,ex) ;
+	}
+}
