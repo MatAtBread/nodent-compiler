@@ -5,24 +5,10 @@ var babylon = require('@babel/babylon');
 var generate = require('@babel/babel-generator').default;
 var visitKeys = require('@babel/babel-types').VISITOR_KEYS;
 
+var _asyncRuntime = require('nodent-runtime/promise');
 function printNode(ast) {
     return generate(ast,{}).code ;
 }
-
-/*
-function forEachNodeKey(n,down){
-	visitKeys[n.type].forEach(function(member){
-		if (Array.isArray(n[member])) {
-			n[member].forEach(down) ;
-		} 
-		else
-			down(n[member]);
-	}) ;
-}
-
-function nodeKeys(n) {
-    return n ? visitKeys[n.type]:null ;
-}*/
 
 function parse(code) {
 	return babylon.parse(code,{
@@ -48,19 +34,22 @@ for (var idx = 2; idx <process.argv.length; idx++) (function(){
 		},{
 			// Code generation options
 			es6target:false,
-			noRuntime:true,
 			babelTree:true,
 			engine:false,
 			generators:false,
 			promises:true,
 			lazyThenables:false,
 			wrapAwait:true,
-//			$runtime:'_asyncRuntime',
-			$Promise:'Promise',
-			$arguments:'$args',
-			generatedSymbolPrefix:'$',
-			$return:'$return',
-			$error:'$error'
+			noRuntime:false,
+			$runtime:'_asyncRuntime',
+		    generatedSymbolPrefix:"$",
+		    $return:"$return",
+		    $error:"$error",
+		    $arguments:"$args",
+		    $Promise:"Promise",
+		    $asyncspawn:"$asyncspawn",
+		    $asyncbind:"$asyncbind",
+		    $makeThenable:'$makeThenable'
 		},
 		{
 			// Helpers for the transformer:

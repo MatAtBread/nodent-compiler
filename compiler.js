@@ -231,7 +231,7 @@ NodentCompiler.prototype.printNode = printNode ;
 
 Object.defineProperty(NodentCompiler.prototype,"Promise",{
     get:function (){
-        initOpts.log("Warning: nodent.Promise is deprecated. Use nodent.Thenable instead");
+        console.warn("Warning: nodent.Promise is deprecated. Use nodent.Thenable instead");
         return Thenable;
     },
     enumerable:false,
