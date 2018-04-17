@@ -1,8 +1,8 @@
 'use strict';
 
 var acorn = require("acorn");
-var treeSurgeon = require('./lib/arboriculture') ;
-var outputCode = require('./lib/output') ;
+var treeSurgeon = require('nodent-transform') ;
+var outputCode = require('./output') ;
 
 var alreadyInstalledPlugin = false ;
 

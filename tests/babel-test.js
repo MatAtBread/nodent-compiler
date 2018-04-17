@@ -18,7 +18,7 @@ function parse(code) {
 	}).program ;
 }
 
-var transform = require('../lib/arboriculture').transform ;
+var transform = require('nodent-transform').transform ;
 
 for (var idx = 2; idx <process.argv.length; idx++) (function(){
 	var fileName = process.argv[idx] ;
