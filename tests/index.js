@@ -23,7 +23,7 @@ for (var idx = 0; idx <args.length; idx++) (function(){
 	try {
 		syncFn = new Function(sample.replace(/(async|await)/g," ")) ;
 		try {
-			var res = c.compile("return async function _(){"+sample+"}", null, null, { sourcemap:false, promises: true, noRuntime: true, es6target: false }) ;
+			var res = c.compile("return async function _(){"+sample+"}", null, { sourcemap:false, promises: true, noRuntime: true, es6target: false }) ;
 			var fn = new Function(res.code)() ;
 			fn().then(function(r){
 				if (r === syncFn())
