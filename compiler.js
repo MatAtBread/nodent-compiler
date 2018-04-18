@@ -1,6 +1,71 @@
-var parser = require('./lib/parser') ;
-var treeSurgeon = require('./lib/arboriculture') ;
-var outputCode = require('./lib/output') ;
+'use strict';
+
+var acorn = require("acorn");
+var treeSurgeon = require('nodent-transform') ;
+var outputCode = require('./output') ;
+
+var alreadyInstalledPlugin = false ;
+
+function acornParse(code,config) {
+    var comments = [] ;
+    var options = {
+        ecmaVersion:8,
+        allowHashBang:true,
+        allowReturnOutsideFunction:true,
+        allowImportExportEverywhere:true,
+        locations:true,
+        onComment:comments
+    } ;
+
+    if (!(config && config.noNodentExtensions) || parseInt(acorn.version) < 4) {
+        if (!alreadyInstalledPlugin) {
+            if (parseInt(acorn.version) < 4)
+                console.warn("Nodent: Warning - noNodentExtensions option requires acorn >=v4.x. Extensions installed.") ;
+            require('acorn-es7-plugin')(acorn) ;
+            alreadyInstalledPlugin = true ;
+        }
+        options.plugins = options.plugins || {} ;
+        options.plugins.asyncawait = {asyncExits:true, awaitAnywhere:true} ;
+    }
+    
+    if (config)
+        for (var k in config)
+            if (k !== 'noNodentExtensions')
+                options[k] = config[k] ;
+
+    var ast = acorn.parse(code,options) ;
+
+    // attach comments to the most tightly containing node
+    treeSurgeon.treeWalker(ast,function(node,descend,path){
+        descend() ;
+        while (comments.length && node.loc &&
+            (node.loc.start.line >= comments[0].loc.start.line && node.loc.end.line>=comments[0].loc.end.line)) {
+            node.$comments = node.$comments||[] ;
+            node.$comments.push(comments.shift()) ;
+        }
+    }) ;
+    return ast ;
+}
+
+function parse(code) {
+	return acornParse(code, {
+      noNodentExtensions:true, // The partial parser only ever parses vanilla JS
+      locations:false,
+      ranges:false,
+      onComment:null
+    }) ;
+}	
+
+function printNode(n) {
+    if (!n) return '' ;
+    if (Array.isArray(n))
+        return n.map(printNode).join("|\n");
+    try {
+        return outputCode(n) ; //+"\t//@"+Object.keys(n).filter(function(k){ return k[0]==='$'}).map(function(k){ return k+":"+n[k] });
+    } catch (ex) {
+        return ex.message + ": " + (n && n.type);
+    }
+} ;
 
 /* Utils */
 function copyObj(a){
@@ -40,7 +105,11 @@ function compile(code,origFilename,__sourceMapping,opts) {
     }
 
     var pr = this.parse(code,origFilename,null,opts);
-    this.asynchronize(pr,null,opts,this.log || noLogger) ;
+    this.transform(pr,opts,{
+		parse: parse,						// Parse a JS fragment into an AST
+		printNode: printNode,				// Print a node as JS source
+		logger:this.logger || noLogger		// Log a warning
+    }) ;
     this.prettyPrint(pr,opts) ;
     return pr ;
 }
@@ -100,9 +169,9 @@ function parseCode(code,origFilename,__sourceMapping,opts) {
 
     var r = { origCode:code.toString(), filename:origFilename } ;
     try {
-        r.ast = parser.parse(r.origCode, opts && opts.parser) ;
+        r.ast = acornParse(r.origCode, opts && opts.parser) ;
         if (opts.babelTree) {
-            parser.treeWalker(r.ast,function(node,descend,path){
+        		treeSurgeon.treeWalker(r.ast,function(node,descend,path){
                 if (node.type==='Literal')
                     path[0].replace(treeSurgeon.babelLiteralNode(node.value)) ;
                 else if (node.type==='Property') {
@@ -135,14 +204,34 @@ NodentCompiler.prototype.isThenable = function(x) { return x && x instanceof Obj
 NodentCompiler.prototype.compile =  compile ;
 // Exported ; but not to be used lightly!
 NodentCompiler.prototype.parse = parseCode ;
-NodentCompiler.prototype.asynchronize =  treeSurgeon.asynchronize ;
-NodentCompiler.prototype.printNode =  treeSurgeon.printNode ;
 NodentCompiler.prototype.prettyPrint =  prettyPrint ;
 NodentCompiler.prototype.getDefaultCompileOptions = undefined ;
+NodentCompiler.prototype.transform = treeSurgeon.transform ;
+// asynchronize and printNode were previuosly defined in arboriculture, but they are
+// are now (>3.2.0) pulled up into compiler so arboriculture.transform can be called from other 
+// hosts such as babel 7
+NodentCompiler.prototype.asynchronize = function asynchronize(pr, __sourceMapping, opts, logger) {
+    try {
+        return treeSurgeon.transform(pr, opts, {
+	    		parse: parse,						// Parse a JS fragment into an AST
+	    		printNode: printNode,				// Print a node as JS source
+	    		logger:logger						// Log a warning
+        }) ;
+    } catch (ex) {
+        if (ex instanceof SyntaxError) {
+            var l = pr.origCode.substr(ex.pos - ex.loc.column);
+            l = l.split("\n")[0];
+            ex.message += " (nodent)\n" + l + "\n" + l.replace(/[\S ]/g, "-").substring(0, ex.loc.column) + "^";
+            ex.stack = "";
+        }
+        throw ex;
+    }
+} ;
+NodentCompiler.prototype.printNode = printNode ;
 
 Object.defineProperty(NodentCompiler.prototype,"Promise",{
     get:function (){
-        initOpts.log("Warning: nodent.Promise is deprecated. Use nodent.Thenable instead");
+        console.warn("Warning: nodent.Promise is deprecated. Use nodent.Thenable instead");
         return Thenable;
     },
     enumerable:false,
@@ -159,12 +248,13 @@ NodentCompiler.initialCodeGenOpts = {
     sourcemap:true,
     engine:false,
     parser:{sourceType:'script'},
+    generatedSymbolPrefix:"$",
     $return:"$return",
     $error:"$error",
     $arguments:"$args",
+    $Promise:"Promise",
     $asyncspawn:"$asyncspawn",
     $asyncbind:"$asyncbind",
-    generatedSymbolPrefix:"$",
     $makeThenable:'$makeThenable'
 };
 
