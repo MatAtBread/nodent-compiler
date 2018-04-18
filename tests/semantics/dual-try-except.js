@@ -2,7 +2,7 @@ var r = [] ;
 
 async function op(x) {
     if (x==='reject') throw x ;
-    return y ;
+    return x ;
 }
 
 async function a(x,y) {

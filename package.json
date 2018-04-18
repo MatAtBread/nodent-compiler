@@ -4,13 +4,16 @@
   "description": "NoDent - Asynchronous Javascript language extensions",
   "main": "compiler.js",
   "scripts": {
-    "test": "node tests/basic.js # Please install 'nodent' and test the compiler fully from there."
+    "test": "node tests/basic.js tests/semantics/* # Please install 'nodent' and test the compiler fully from there."
   },
   "dependencies": {
     "acorn": "^5.5.3",
     "acorn-es7-plugin": "^1.1.7",
     "nodent-transform": "^3.2.0",
     "source-map": "^0.5.7"
+  },
+  "devDependencies": {
+    "nodent-runtime": "^3.2.1"
   },
   "repository": {
     "type": "git",
