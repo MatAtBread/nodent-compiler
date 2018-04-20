@@ -9,7 +9,7 @@ var alreadyInstalledPlugin = false ;
 function acornParse(code,config) {
     var comments = [] ;
     var options = {
-        ecmaVersion:8,
+        ecmaVersion:9,
         allowHashBang:true,
         allowReturnOutsideFunction:true,
         allowImportExportEverywhere:true,
@@ -17,21 +17,22 @@ function acornParse(code,config) {
         onComment:comments
     } ;
 
+    if (config)
+        for (var k in config)
+            if (k !== 'noNodentExtensions' && k != 'onParserInstallation')
+                options[k] = config[k] ;
+
     if (!(config && config.noNodentExtensions) || parseInt(acorn.version) < 4) {
         if (!alreadyInstalledPlugin) {
             if (parseInt(acorn.version) < 4)
                 console.warn("Nodent: Warning - noNodentExtensions option requires acorn >=v4.x. Extensions installed.") ;
             require('acorn-es7-plugin')(acorn) ;
+            if (config && config.onParserInstallation) config.onParserInstallation(acorn) ;
             alreadyInstalledPlugin = true ;
         }
         options.plugins = options.plugins || {} ;
         options.plugins.asyncawait = {asyncExits:true, awaitAnywhere:true} ;
     }
-    
-    if (config)
-        for (var k in config)
-            if (k !== 'noNodentExtensions')
-                options[k] = config[k] ;
 
     var ast = acorn.parse(code,options) ;
 
