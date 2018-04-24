@@ -39,4 +39,4 @@ async function test() {
 	}
 }
 
-return 1==await test() ;
+return await test() ;
