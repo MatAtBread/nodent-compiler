@@ -14,7 +14,7 @@ if (!('Promise' in global)){
 
 var fs = require('fs') ;
 var args = process.argv.slice(2) ;
-var passed = 0, failed = 0 ;
+var passed = 0, failed = 0, impossible = 0 ;
 var complete, p = new Promise(function(r){ complete = r }) ;
 var options = [
 	{ sourcemap:false, promises: true, noRuntime: true },
@@ -25,6 +25,14 @@ var options = [
 //	{ sourcemap:false, es7:true, lazyThenables: true } 
 ] ;
 var totalTests = args.length*options.length ;
+
+if (!Object.assign) {
+	Object.assign = function(d,s) {
+      Object.keys(s).forEach(function(k){
+    	  	d[k] = s[k] ;
+      });
+	};
+}
 
 function check(file,sample,syncValue) {
 	if (syncValue===undefined)
@@ -74,11 +82,13 @@ for (var idx = 0; idx <args.length; idx++) (function(){
 		else 
 			check(fileName,sample,s) ;
 	} catch(ex) {
-		console.log(fileName,"\tRequires a later version of nodejs to test",ex) ;
+		failed += options.length ;
+		impossible += options.length ;
+		console.log("FAIL",fileName,"requires a later version of nodejs",ex) ;
 	}
 })();
 
 p.then(function(){
 	console.log(passed+" test(s) passed") ;
-	failed && console.log(failed+" test(s) FAILED") ;
+	failed && console.log(failed+" test(s) FAILED",impossible ? "(of which "+impossible+" expected a later version of node)":"") ; 
 },$error) ;
