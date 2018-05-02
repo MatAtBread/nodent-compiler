@@ -14,6 +14,12 @@ if (!('Promise' in global)){
 
 var fs = require('fs') ;
 var args = process.argv.slice(2) ;
+
+var isVerbose = args.indexOf("--verbose")+1 ;
+if (isVerbose) {
+	args.splice(isVerbose-1,1) ;
+}
+
 var passed = 0, failed = 0, impossible = 0 ;
 var complete, p = new Promise(function(r){ complete = r }) ;
 var options = [
@@ -24,7 +30,7 @@ var options = [
 // NB: lazyThenable tests currently skipped as there are two known failues - nested-throw.js and dual-loop-decl-destructure-nest.js
 //	{ sourcemap:false, es7:true, lazyThenables: true } 
 ] ;
-var totalTests = args.length*options.length ;
+var totalTests = args.length*options.length*2 ;
 
 if (!Object.assign) {
 	Object.assign = function(d,s) {
@@ -46,6 +52,8 @@ function check(file,sample,syncValue) {
 				if (r===undefined)
 					throw new Error("undefined async result") ;
 				if (r === syncValue) {
+					if (isVerbose)
+						console.log("PASS",file, opts,"\nactual   : ",r,"\nexpected : ",syncValue) ;
 					passed += 1 ;
 				} else {
 					console.log("FAIL",file, opts,"\nactual   : ",r,"\nexpected : ",syncValue) ;
@@ -69,13 +77,9 @@ function check(file,sample,syncValue) {
 	}
 }
 
-for (var idx = 0; idx <args.length; idx++) (function(){
-	var fileName = args[idx] ;
-	var sample = "'"+fileName+"';\n\n"+fs.readFileSync(fileName).toString();
-	var syncFn ;
-
+function test(fileName,sample){
 	try {
-		syncFn = new Function(sample.replace(/(async|await)/g," ")) ;
+		var syncFn = new Function(sample.replace(/(async|await)/g," ")) ;
 		var s = syncFn() ;
 		if (s && s.then) 
 			s.then(check.bind(null,fileName,sample),check.bind(null,fileName,sample)) ;
@@ -86,7 +90,14 @@ for (var idx = 0; idx <args.length; idx++) (function(){
 		impossible += options.length ;
 		console.log("FAIL",fileName,"requires a later version of nodejs",ex) ;
 	}
-})();
+}
+
+for (var idx = 0; idx <args.length; idx++) {
+	var fileName = args[idx] ;
+	var code = fs.readFileSync(fileName).toString() ;
+	test(fileName,"'"+fileName+"';\n\n"+code) ;
+	test(fileName,"'use strict';\n\n'"+fileName+"';\n\n"+code) ;
+} ;
 
 p.then(function(){
 	console.log(passed+" test(s) passed") ;
