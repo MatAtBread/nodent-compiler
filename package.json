@@ -1,6 +1,6 @@
 {
   "name": "nodent-compiler",
-  "version": "3.2.4",
+  "version": "3.2.9",
   "description": "NoDent - Asynchronous Javascript language extensions",
   "main": "compiler.js",
   "scripts": {

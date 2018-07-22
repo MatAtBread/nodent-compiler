@@ -213,11 +213,20 @@ NodentCompiler.prototype.transform = treeSurgeon.transform ;
 // hosts such as babel 7
 NodentCompiler.prototype.asynchronize = function asynchronize(pr, __sourceMapping, opts, logger) {
     try {
-        return treeSurgeon.transform(pr, opts, {
+        var tree = treeSurgeon.transform(pr, opts, {
 	    		parse: parse,						// Parse a JS fragment into an AST
 	    		printNode: printNode,				// Print a node as JS source
 	    		logger:logger						// Log a warning
         }) ;
+        if (opts.babelTree) {
+        	tree.ast = treeSurgeon.treeWalker(tree.ast, function(node,descend,path){
+        		if (node.type === 'Literal')
+        			path[0].replace(treeSurgeon.babelLiteralNode(node.value)) ;
+        		else 
+        			descend() ;
+        	}) ;
+        }
+        return tree ;
     } catch (ex) {
         if (ex instanceof SyntaxError) {
             var l = pr.origCode.substr(ex.pos - ex.loc.column);
