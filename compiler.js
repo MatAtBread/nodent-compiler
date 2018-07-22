@@ -84,7 +84,11 @@ function btoa(str) {
     if (str instanceof Buffer) {
         buffer = str;
     } else {
-        buffer = new Buffer(str.toString(), 'binary');
+    		if (Buffer.from) {
+    	        buffer = Buffer.from(str.toString(), 'binary');
+    		} else {
+    	        buffer = new Buffer(str.toString(), 'binary');
+    		}
     }
 
     return buffer.toString('base64');
