@@ -1,13 +1,13 @@
 {
   "name": "nodent-compiler",
-  "version": "3.2.9",
+  "version": "3.2.10",
   "description": "NoDent - Asynchronous Javascript language extensions",
   "main": "compiler.js",
   "scripts": {
     "test": "node tests tests/semantics/*"
   },
   "dependencies": {
-    "acorn": ">=2.5.2",
+    "acorn": ">= 2.5.2 <= 5.7.3",
     "acorn-es7-plugin": "^1.1.7",
     "nodent-transform": "^3.2.9",
     "source-map": "^0.5.7"
