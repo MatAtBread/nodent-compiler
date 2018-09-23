@@ -16,6 +16,11 @@ async function arraySpread() {
   return [a,b].toString()
 }
 
+async function objectSpread() {
+  const {a, ...b} = await nop({ a: 1, b: 2 });
+  return [a,b].toString()
+}
+
 // fails in transform
 async function arrayElide() {
   const [,a,,b] = await nop([1, 2, 3, 4]);
@@ -60,5 +65,5 @@ async function assignArray() {
 return [
   await trivialArray(),await trivialObject(),await rename(),await key(),
   await nestedArray(),await nestedObject(),await indirect(), await arrayElide(),
-  await arraySpread(), await assignObj(), await assignArray()
+  await arraySpread(), await objectSpread(), await assignObj(), await assignArray()
 ].toString() ;
