@@ -700,7 +700,7 @@ var traveler = {
         if (node.properties.length > 0) {
             var properties = node.properties, length = properties.length;
             for (var i = 0; ; ) {
-                this.out(properties[i], state,'Property');
+                this.out(properties[i], state, properties[i].type);
                 if (++i < length)
                     state.write(null, ', ');
                  else
