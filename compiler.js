@@ -22,18 +22,26 @@ function acornParse(code,config) {
             if (k !== 'noNodentExtensions' && k != 'onParserInstallation')
                 options[k] = config[k] ;
 
-    if (!(config && config.noNodentExtensions) || parseInt(acorn.version) < 4) {
-        if (!alreadyInstalledPlugin) {
-            if (parseInt(acorn.version) < 4)
-                console.warn("Nodent: Warning - noNodentExtensions option requires acorn >=v4.x. Extensions installed.") ;
-            require('acorn-es7-plugin')(acorn) ;
-            if (config && config.onParserInstallation) config.onParserInstallation(acorn) ;
-            alreadyInstalledPlugin = true ;
+    if (parseInt(acorn.version) >= 6) {
+    	if (!config || !config.noNodentExtensions) {
+    		console.warn("Nodent: Extensions not supported in acorn v6. Setting noNodentExtensions option") ;
+    		config = config || {} ;
+    		config.noNodentExtensions = true ;
+    	}
+    } else {
+        if (!(config && config.noNodentExtensions) || parseInt(acorn.version) < 4) {
+            if (!alreadyInstalledPlugin) {
+                if (parseInt(acorn.version) < 4)
+                    console.warn("Nodent: Warning - noNodentExtensions option requires acorn >=v4.x. Extensions installed.") ;
+                require('acorn-es7-plugin')(acorn) ;
+                if (config && config.onParserInstallation) config.onParserInstallation(acorn) ;
+                alreadyInstalledPlugin = true ;
+            }
+            options.plugins = options.plugins || {} ;
+            options.plugins.asyncawait = {asyncExits:true, awaitAnywhere:true} ;
         }
-        options.plugins = options.plugins || {} ;
-        options.plugins.asyncawait = {asyncExits:true, awaitAnywhere:true} ;
     }
-
+    
     var ast = acorn.parse(code,options) ;
 
     // attach comments to the most tightly containing node
